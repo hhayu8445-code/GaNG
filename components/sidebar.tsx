@@ -40,6 +40,7 @@ const navItems = [
 export function Sidebar() {
   const pathname = usePathname()
   const [collapsed, setCollapsed] = useState(false)
+  const [mobileOpen, setMobileOpen] = useState(false)
   const { user, isAdmin } = useAuth()
   const { stats, setStats } = useStatsStore()
 
@@ -65,9 +66,21 @@ export function Sidebar() {
   ]
 
   return (
+    <>
+      <button
+        onClick={() => setMobileOpen(!mobileOpen)}
+        className="md:hidden fixed top-4 left-4 z-50 p-2 rounded-lg bg-sidebar border border-border"
+      >
+        <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
+      {mobileOpen && <div className="md:hidden fixed inset-0 bg-black/50 z-40" onClick={() => setMobileOpen(false)} />}
     <aside
       className={cn(
         "fixed left-0 top-0 z-40 h-screen border-r border-border bg-sidebar transition-all duration-300",
+        "md:translate-x-0",
+        mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0",
         collapsed ? "w-20" : "w-72",
       )}
     >
@@ -193,5 +206,6 @@ export function Sidebar() {
         )}
       </div>
     </aside>
+    </>
   )
 }

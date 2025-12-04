@@ -204,4 +204,19 @@
   .status-away {
     background-color: oklch(0.8 0.15 80);
   }
+
+  /* Mobile responsive utilities */
+  @media (max-width: 768px) {
+    .glass {
+      backdrop-filter: blur(16px);
+    }
+  }
+
+  /* Touch-friendly spacing */
+  @media (hover: none) and (pointer: coarse) {
+    button, a {
+      min-height: 44px;
+      min-width: 44px;
+    }
+  }
 }
