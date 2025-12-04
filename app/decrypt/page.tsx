@@ -14,6 +14,8 @@ export default function DecryptPage() {
   const [file, setFile] = useState<File | null>(null)
   const [decrypting, setDecrypting] = useState(false)
   const [result, setResult] = useState("")
+  const [downloadId, setDownloadId] = useState("")
+  const [useDiscord, setUseDiscord] = useState(false)
 
   const handleDecrypt = async () => {
     if (!file) return
@@ -21,6 +23,7 @@ export default function DecryptPage() {
     try {
       const formData = new FormData()
       formData.append("file", file)
+      formData.append("useDiscord", useDiscord.toString())
       
       const res = await fetch("/api/decrypt", {
         method: "POST",
@@ -30,7 +33,8 @@ export default function DecryptPage() {
       const data = await res.json()
       
       if (data.success) {
-        setResult(data.decrypted)
+        setResult(data.decrypted || `// Processing via Discord Bot\n// Download ID: ${data.downloadId}\n// Download URL: ${data.downloadUrl}\n// Check Discord for completion notification`)
+        setDownloadId(data.downloadId)
       } else {
         setResult(`// Error: ${data.error}`)
       }
@@ -95,6 +99,18 @@ export default function DecryptPage() {
                   </div>
                 </div>
 
+                <div className="flex items-center gap-2 mb-3">
+                  <input
+                    type="checkbox"
+                    id="use-discord"
+                    checked={useDiscord}
+                    onChange={(e) => setUseDiscord(e.target.checked)}
+                    className="rounded"
+                  />
+                  <label htmlFor="use-discord" className="text-sm text-muted-foreground cursor-pointer">
+                    Process via Discord Bot (for large files)
+                  </label>
+                </div>
                 <Button
                   onClick={handleDecrypt}
                   disabled={!file || decrypting}
@@ -126,11 +142,20 @@ export default function DecryptPage() {
                 placeholder="Decrypted code will appear here..."
                 className="min-h-[300px] md:min-h-[400px] font-mono text-xs md:text-sm bg-secondary/30 resize-none"
               />
-              {result && (
-                <Button className="w-full mt-4 bg-success hover:bg-success/90 gap-2 h-10 md:h-11 text-sm md:text-base">
-                  <Download className="h-4 w-4" />
-                  Download Decrypted File
-                </Button>
+              {result && downloadId && (
+                <div className="space-y-3 mt-4">
+                  <div className="bg-primary/10 border border-primary/20 rounded-lg p-3">
+                    <p className="text-xs text-muted-foreground mb-1">Download ID:</p>
+                    <p className="text-sm font-mono font-bold text-primary">{downloadId}</p>
+                  </div>
+                  <Button 
+                    onClick={() => window.open(`/api/decrypt/download/${downloadId}`, '_blank')}
+                    className="w-full bg-success hover:bg-success/90 gap-2 h-10 md:h-11 text-sm md:text-base"
+                  >
+                    <Download className="h-4 w-4" />
+                    Download Decrypted File
+                  </Button>
+                </div>
               )}
             </div>
           </div>
