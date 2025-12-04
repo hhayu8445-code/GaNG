@@ -7,6 +7,9 @@ export const mockStats = {
   onlineUsers: 3420,
   totalMembers: 12500,
   totalDownloads: 42000,
+  totalThreads: 4250,
+  totalPosts: 18900,
+  totalAssets: 1250,
   revenue: 125000,
   popularAssets: [
     { id: 1, name: "Premium Car Pack", downloads: 2450, rating: 4.8 },
