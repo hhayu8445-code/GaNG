@@ -2,7 +2,8 @@ import { Sidebar } from "@/components/sidebar"
 import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { mockAssets } from "@/lib/data"
+import type { Asset } from "@/lib/types"
+import { assets } from "@/app/api/assets/route"
 import {
   Download,
   Star,
@@ -22,10 +23,9 @@ import Link from "next/link"
 import Image from "next/image"
 import { notFound } from "next/navigation"
 
-export default async function AssetPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params
-  const asset = mockAssets.find((a) => a.id === id)
-
+export default function AssetPage({ params }: { params: { id: string } }) {
+  const { id } = params
+  const asset = (assets as Asset[]).find((a) => a.id === id)
   if (!asset) {
     notFound()
   }

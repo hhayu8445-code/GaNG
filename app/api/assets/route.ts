@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import type { Asset, PaginatedResponse } from "@/lib/types"
 
 // Production-ready asset data (would connect to database in production)
-const assets: Asset[] = [
+export const assets: Asset[] = [
   {
     id: "1",
     title: "Advanced Banking System",

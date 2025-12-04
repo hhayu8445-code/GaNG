@@ -87,7 +87,7 @@ export default function AnalyticsPage() {
                   +12%
                 </div>
               </div>
-              <p className="text-3xl font-bold text-foreground">{mockStats.totalMembers}</p>
+              <p className="text-3xl font-bold text-foreground">{mockStats.totalUsers}</p>
               <p className="text-sm text-muted-foreground">Total Users</p>
             </div>
             <div className="rounded-xl border border-border bg-card p-6">

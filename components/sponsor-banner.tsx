@@ -23,6 +23,8 @@ export function SponsorBanner() {
   if (!isVisible || activeSponsors.length === 0) return null
 
   const sponsor = activeSponsors[currentIndex]
+  const href = sponsor.url || "#"
+  const isExternal = Boolean(sponsor.url)
 
   return (
     <div className="relative overflow-hidden rounded-xl glass border border-primary/20 mb-6">
@@ -38,9 +40,8 @@ export function SponsorBanner() {
       </div>
 
       <a
-        href={sponsor.url}
-        target="_blank"
-        rel="noopener noreferrer"
+        href={href}
+        {...(isExternal ? { target: "_blank", rel: "noopener noreferrer" } : {})}
         className="block relative aspect-[4/1] sm:aspect-[5/1] md:aspect-[6/1] group"
       >
         {sponsor.type === "video" ? (

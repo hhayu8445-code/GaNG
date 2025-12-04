@@ -1,5 +1,4 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { cookies } from "next/headers"
 import { exchangeCodeForTokens, getDiscordUser, getAvatarUrl, createSessionToken, checkIsAdmin } from "@/lib/auth"
 import type { SessionUser } from "@/lib/auth"
 
@@ -19,8 +18,7 @@ export async function GET(request: NextRequest) {
   }
 
   // Verify state for CSRF protection
-  const cookieStore = await cookies()
-  const storedState = cookieStore.get("oauth_state")?.value
+  const storedState = request.cookies.get("oauth_state")?.value
 
   if (!storedState || storedState !== state) {
     return NextResponse.redirect(new URL("/?error=invalid_state", request.url))
@@ -54,21 +52,21 @@ export async function GET(request: NextRequest) {
     expiresAt: Date.now() + tokens.expires_in * 1000,
   }
 
-  const sessionToken = createSessionToken(sessionUser)
+  const sessionToken = await createSessionToken(sessionUser)
 
-  // Clear OAuth state cookie
-  cookieStore.delete("oauth_state")
+  // Redirect to dashboard or admin based on role
+  const redirectUrl = isAdmin ? "/admin" : "/dashboard"
+  const response = NextResponse.redirect(new URL(redirectUrl, request.url))
 
-  // Set session cookie
-  cookieStore.set("session", sessionToken, {
-    httpOnly: false,
+  // Clear OAuth state cookie and set session cookie on response
+  response.cookies.delete("oauth_state")
+  response.cookies.set("session", sessionToken, {
+    httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     maxAge: 60 * 60 * 24 * 7, // 7 days
     path: "/",
   })
 
-  // Redirect to dashboard or admin based on role
-  const redirectUrl = isAdmin ? "/admin" : "/dashboard"
-  return NextResponse.redirect(new URL(redirectUrl, request.url))
+  return response
 }

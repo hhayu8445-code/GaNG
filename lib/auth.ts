@@ -1,11 +1,12 @@
 import { cookies } from "next/headers"
 
-// Discord OAuth2 Configuration for fivemtools.net
+// Discord OAuth2 Configuration (read from environment)
 export const DISCORD_CONFIG = {
-  clientId: process.env.DISCORD_CLIENT_ID || "1445650115447754933",
-  clientSecret: process.env.DISCORD_CLIENT_SECRET || "6JSK5ydHewv7DmZlhHa6P1e4q-pbFXe_",
-  redirectUri: process.env.DISCORD_REDIRECT_URI || "https://fivemtools.net/api/auth/callback",
-  adminDiscordId: process.env.ADMIN_DISCORD_ID || "1047719075322810378",
+  clientId: process.env.DISCORD_CLIENT_ID ?? "",
+  clientSecret: process.env.DISCORD_CLIENT_SECRET ?? "",
+  redirectUri:
+    process.env.DISCORD_REDIRECT_URI || `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/api/auth/callback`,
+  adminDiscordId: process.env.ADMIN_DISCORD_ID || "",
   scopes: ["identify", "email", "guilds"],
 }
 
@@ -106,29 +107,114 @@ export function checkIsAdmin(discordId: string): boolean {
   return discordId === DISCORD_CONFIG.adminDiscordId
 }
 
-// Session management
+// --- Session management (HMAC-signed cookie) ---
+const encoder = new TextEncoder()
+
+function toBase64Url(input: string | ArrayBuffer): string {
+  let base64 = ""
+  if (typeof input === "string") {
+    // Encode string to base64
+    if (typeof Buffer !== "undefined") {
+      base64 = Buffer.from(input, "utf-8").toString("base64")
+    } else {
+      // Fallback for environments with btoa
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      base64 = btoa(input)
+    }
+  } else {
+    const bytes = new Uint8Array(input)
+    if (typeof Buffer !== "undefined") {
+      base64 = Buffer.from(bytes).toString("base64")
+    } else {
+      let binary = ""
+      for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i])
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      base64 = btoa(binary)
+    }
+  }
+  return base64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "")
+}
+
+function fromBase64UrlToString(b64url: string): string {
+  const b64 = b64url.replace(/-/g, "+").replace(/_/g, "/")
+  const pad = b64.length % 4
+  const padded = pad ? b64 + "====".slice(pad) : b64
+  if (typeof Buffer !== "undefined") {
+    return Buffer.from(padded, "base64").toString("utf-8")
+  }
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-ignore
+  return atob(padded)
+}
+
+function fromBase64UrlToBytes(b64url: string): Uint8Array {
+  const b64 = b64url.replace(/-/g, "+").replace(/_/g, "/")
+  const pad = b64.length % 4
+  const padded = pad ? b64 + "====".slice(pad) : b64
+  if (typeof Buffer !== "undefined") {
+    const buf = Buffer.from(padded, "base64")
+    return new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength)
+  }
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-ignore
+  const binary = atob(padded)
+  const bytes = new Uint8Array(binary.length)
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
+  return bytes
+}
+
+async function getHmacKey() {
+  const secret = process.env.SESSION_SECRET || ""
+  if (!secret) return null
+  return crypto.subtle.importKey("raw", encoder.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign", "verify"])
+}
+
+async function signPayload(payload: string): Promise<string | null> {
+  const key = await getHmacKey()
+  if (!key) return null
+  const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(payload))
+  return toBase64Url(signature)
+}
+
+async function verifyPayload(payload: string, signatureB64Url: string): Promise<boolean> {
+  const key = await getHmacKey()
+  if (!key) return false
+  const sigBytes = fromBase64UrlToBytes(signatureB64Url)
+  return crypto.subtle.verify("HMAC", key, sigBytes, encoder.encode(payload))
+}
+
 export async function getSession(): Promise<SessionUser | null> {
   try {
     const cookieStore = await cookies()
-    const sessionCookie = cookieStore.get("session")
+    const raw = cookieStore.get("session")?.value
+    if (!raw) return null
 
-    if (!sessionCookie?.value) return null
+    const parts = raw.split(".")
+    if (parts.length !== 2) return null
+    const [payloadB64, signature] = parts
+    const payload = fromBase64UrlToString(payloadB64)
 
-    const session = JSON.parse(atob(sessionCookie.value)) as SessionUser
+    const valid = await verifyPayload(payload, signature)
+    if (!valid) return null
 
-    // Check if session is expired
-    if (session.expiresAt < Date.now()) {
-      return null
-    }
-
+    const session = JSON.parse(payload) as SessionUser
+    if (session.expiresAt < Date.now()) return null
     return session
   } catch {
     return null
   }
 }
 
-export function createSessionToken(user: SessionUser): string {
-  return btoa(JSON.stringify(user))
+export async function createSessionToken(user: SessionUser): Promise<string> {
+  const payload = JSON.stringify(user)
+  const signature = await signPayload(payload)
+  if (!signature) {
+    throw new Error("SESSION_SECRET is not configured")
+  }
+  const payloadB64 = toBase64Url(payload)
+  return `${payloadB64}.${signature}`
 }
 
 // Get avatar URL

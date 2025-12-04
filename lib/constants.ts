@@ -6,6 +6,12 @@ export const SITE_NAME = "FiveM Tools V7"
 export const SITE_DESCRIPTION = "The #1 FiveM Resource Hub - Premium Scripts, MLOs, Vehicles & More"
 export const SITE_URL = "https://fivemtools.net"
 
+// Discord Links
+export const DISCORD_LINKS = {
+  COMMUNITY: "https://discord.gg/tZXg4GVRM5",
+  SUPPORT: "https://discord.gg/fivemtools"
+}
+
 // Framework Logos
 export const FRAMEWORK_LOGOS = {
   qbox: "https://www.qbox.re/static/screenshots/qbox-logo2.png",
