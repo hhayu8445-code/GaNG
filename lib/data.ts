@@ -96,10 +96,11 @@ export const mockForumCategories = [
 // Mock forum threads
 export const mockThreads = [
   {
-    id: 1,
-    categoryId: 1,
+    id: "1",
+    categoryId: "1",
+    category: "General Discussion",
     title: "Welcome to our community!",
-    author: "Admin",
+    author: { id: "admin", username: "Admin", avatar: "/admin-avatar.jpg", membership: "admin" as const, reputation: 1000 },
     replies: 24,
     views: 540,
     isPinned: true,
@@ -109,10 +110,11 @@ export const mockThreads = [
     content: "Welcome to our FiveM tools community forum!",
   },
   {
-    id: 2,
-    categoryId: 2,
+    id: "2",
+    categoryId: "2",
+    category: "Asset Releases",
     title: "New realistic weapon pack released",
-    author: "AssetCreator",
+    author: { id: "creator", username: "AssetCreator", avatar: "/creator-avatar.jpg", membership: "vip" as const, reputation: 500 },
     replies: 18,
     views: 420,
     isPinned: false,
