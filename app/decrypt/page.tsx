@@ -18,9 +18,27 @@ export default function DecryptPage() {
   const handleDecrypt = async () => {
     if (!file) return
     setDecrypting(true)
-    await new Promise(r => setTimeout(r, 2000))
-    setResult("// Decrypted successfully!\n// Your decrypted code will appear here...")
-    setDecrypting(false)
+    try {
+      const formData = new FormData()
+      formData.append("file", file)
+      
+      const res = await fetch("/api/decrypt", {
+        method: "POST",
+        body: formData
+      })
+      
+      const data = await res.json()
+      
+      if (data.success) {
+        setResult(data.decrypted)
+      } else {
+        setResult(`// Error: ${data.error}`)
+      }
+    } catch (error) {
+      setResult("// Error: Failed to decrypt file")
+    } finally {
+      setDecrypting(false)
+    }
   }
 
   return (
