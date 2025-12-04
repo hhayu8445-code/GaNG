@@ -11,7 +11,7 @@ const mockUser = {
   email: "owner@server.com",
   avatar: "/gamer-avatar.png",
   discordId: "123456789",
-  membership: "vip" as const,
+  membership: "vip" as "vip" | "admin",
   downloads: 45,
   reputation: 125,
   points: 680,
