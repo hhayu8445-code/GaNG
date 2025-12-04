@@ -182,7 +182,7 @@ async function verifyPayload(payload: string, signatureB64Url: string): Promise<
   const key = await getHmacKey()
   if (!key) return false
   const sigBytes = fromBase64UrlToBytes(signatureB64Url)
-  return crypto.subtle.verify("HMAC", key, sigBytes, encoder.encode(payload))
+  return crypto.subtle.verify("HMAC", key, sigBytes as BufferSource, encoder.encode(payload))
 }
 
 export async function getSession(): Promise<SessionUser | null> {

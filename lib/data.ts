@@ -4,6 +4,8 @@
 export const mockStats = {
   totalUsers: 12500,
   activeUsers: 8700,
+  onlineUsers: 3420,
+  totalMembers: 12500,
   totalDownloads: 42000,
   revenue: 125000,
   popularAssets: [
