@@ -8,7 +8,8 @@ import { notFound } from "next/navigation"
 
 export default async function CategoryPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const category = mockForumCategories.find((c) => c.id === Number(id))
+  const categoryId = Number(id)
+  const category = mockForumCategories.find((c) => c.id === categoryId)
 
   if (!category) {
     notFound()
