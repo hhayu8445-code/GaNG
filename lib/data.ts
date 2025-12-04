@@ -93,6 +93,13 @@ export const mockForumCategories = [
   },
 ];
 
+// Mock notifications
+export const mockNotifications = [
+  { id: "1", type: "reply" as const, title: "New Reply", message: "Someone replied to your thread", createdAt: "2024-03-08", read: false },
+  { id: "2", type: "like" as const, title: "New Like", message: "Your post received a like", createdAt: "2024-03-07", read: false },
+  { id: "3", type: "system" as const, title: "System Update", message: "New features available", createdAt: "2024-03-06", read: true },
+];
+
 // Mock forum threads
 export const mockThreads = [
   {
