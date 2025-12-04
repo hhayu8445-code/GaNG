@@ -53,9 +53,10 @@ export const mockAssets = [
 // Mock forum categories
 export const mockForumCategories = [
   {
-    id: 1,
+    id: "1",
     name: "General Discussion",
     description: "Talk about anything FiveM related",
+    threadCount: 1250,
     threads: 1250,
     posts: 5400,
     lastPost: {
@@ -65,9 +66,10 @@ export const mockForumCategories = [
     },
   },
   {
-    id: 2,
+    id: "2",
     name: "Asset Releases",
     description: "Share your latest creations",
+    threadCount: 870,
     threads: 870,
     posts: 2100,
     lastPost: {
@@ -77,9 +79,10 @@ export const mockForumCategories = [
     },
   },
   {
-    id: 3,
+    id: "3",
     name: "Server Advertising",
     description: "Promote your FiveM servers",
+    threadCount: 640,
     threads: 640,
     posts: 1800,
     lastPost: {
