@@ -1,5 +1,6 @@
 import { Sidebar } from "@/components/sidebar"
 import { Header } from "@/components/header"
+import { ChatSystem } from "@/components/chat-system"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Plus, Search, Send, Phone, Video, MoreVertical, Paperclip, Smile, ImageIcon, Mic } from "lucide-react"
