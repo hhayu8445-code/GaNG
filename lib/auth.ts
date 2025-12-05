@@ -1,6 +1,5 @@
 import { NextAuthOptions } from 'next-auth'
 import DiscordProvider from 'next-auth/providers/discord'
-import { PrismaAdapter } from '@next-auth/prisma-adapter'
 import { prisma } from './db'
 
 declare module "next-auth" {
@@ -18,7 +17,6 @@ declare module "next-auth" {
 }
 
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma),
   providers: [
     DiscordProvider({
       clientId: process.env.DISCORD_CLIENT_ID!,
@@ -26,10 +24,35 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async session({ session, user }) {
-      if (session.user) {
-        const dbUser = await prisma.user.findFirst({
-          where: { email: session.user.email! },
+    async jwt({ token, account, profile }) {
+      if (account?.provider === 'discord' && profile) {
+        const dbUser = await prisma.user.upsert({
+          where: { discordId: (profile as any).id },
+          update: {
+            username: (profile as any).username,
+            email: token.email,
+            avatar: (profile as any).avatar ? `https://cdn.discordapp.com/avatars/${(profile as any).id}/${(profile as any).avatar}.png` : null,
+          },
+          create: {
+            discordId: (profile as any).id,
+            username: (profile as any).username,
+            email: token.email,
+            avatar: (profile as any).avatar ? `https://cdn.discordapp.com/avatars/${(profile as any).id}/${(profile as any).avatar}.png` : null,
+            coins: 100,
+            isAdmin: (profile as any).id === process.env.ADMIN_DISCORD_ID,
+          },
+        })
+        token.discordId = dbUser.discordId
+        token.coins = dbUser.coins
+        token.membership = dbUser.membership
+        token.isAdmin = dbUser.isAdmin
+      }
+      return token
+    },
+    async session({ session, token }) {
+      if (token.discordId) {
+        const dbUser = await prisma.user.findUnique({
+          where: { discordId: token.discordId as string },
         })
         
         if (dbUser) {
@@ -41,33 +64,11 @@ export const authOptions: NextAuthOptions = {
       }
       return session
     },
-    async signIn({ user, account, profile }) {
-      if (account?.provider === 'discord' && profile) {
-        try {
-          await prisma.user.upsert({
-            where: { discordId: (profile as any).id },
-            update: {
-              username: (profile as any).username,
-              email: user.email,
-              avatar: user.image,
-            },
-            create: {
-              discordId: (profile as any).id,
-              username: (profile as any).username,
-              email: user.email,
-              avatar: user.image,
-              coins: 100,
-            },
-          })
-        } catch (error) {
-          console.error('Error creating/updating user:', error)
-        }
-      }
-      return true
-    },
+  },
+  session: {
+    strategy: 'jwt',
   },
   pages: {
-    signIn: '/auth/signin',
-    error: '/auth/error',
+    signIn: '/',
   },
 }

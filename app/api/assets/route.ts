@@ -50,8 +50,19 @@ export async function GET(request: NextRequest) {
       prisma.asset.count({ where })
     ])
 
+    const formattedAssets = assets.map(asset => ({
+      ...asset,
+      price: asset.coinPrice === 0 ? "free" : "premium",
+      author: asset.author.username,
+      rating: 4.8,
+      isVerified: true,
+      isFeatured: asset.downloads > 10000,
+      image: asset.thumbnail,
+    }))
+
     return NextResponse.json({
-      assets,
+      items: formattedAssets,
+      assets: formattedAssets,
       pagination: {
         page,
         limit,

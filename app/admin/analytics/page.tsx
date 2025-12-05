@@ -1,7 +1,8 @@
+"use client"
 import { Sidebar } from "@/components/sidebar"
 import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
-import { mockStats } from "@/lib/data"
+import { useState } from "react"
 import {
   ArrowLeft,
   TrendingUp,
@@ -14,6 +15,9 @@ import {
   PieChart,
 } from "lucide-react"
 import Link from "next/link"
+import { useEffect } from "react"
+import { useRouter } from "next/navigation"
+import { useAuth } from "@/components/auth-provider"
 
 const weeklyDownloads = [
   { day: "Mon", downloads: 120 },
@@ -41,7 +45,40 @@ const topAssets = [
 ]
 
 export default function AnalyticsPage() {
-  const maxDownloads = Math.max(...weeklyDownloads.map((d) => d.downloads))
+  const { isAdmin, isLoading } = useAuth()
+  const router = useRouter()
+  const [analytics, setAnalytics] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (!isLoading && !isAdmin) {
+      router.push("/")
+    }
+  }, [isAdmin, isLoading, router])
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const res = await fetch('/api/admin/analytics')
+        const data = await res.json()
+        setAnalytics(data)
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
+  }, [])
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="h-12 w-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
+
+  if (!isAdmin) return null
+  const maxDownloads = Math.max(...(analytics?.weeklyDownloads ?? [{ downloads: 1 }]).map((d: any) => d.downloads || 1))
 
   return (
     <div className="min-h-screen bg-background">
@@ -87,7 +124,7 @@ export default function AnalyticsPage() {
                   +12%
                 </div>
               </div>
-              <p className="text-3xl font-bold text-foreground">{mockStats.totalUsers}</p>
+              <p className="text-3xl font-bold text-foreground">{analytics?.overview?.totalUsers ?? 0}</p>
               <p className="text-sm text-muted-foreground">Total Users</p>
             </div>
             <div className="rounded-xl border border-border bg-card p-6">
@@ -98,7 +135,7 @@ export default function AnalyticsPage() {
                   +24%
                 </div>
               </div>
-              <p className="text-3xl font-bold text-foreground">{mockStats.totalDownloads.toLocaleString()}</p>
+              <p className="text-3xl font-bold text-foreground">{(analytics?.overview?.totalDownloads ?? 0).toLocaleString()}</p>
               <p className="text-sm text-muted-foreground">Total Downloads</p>
             </div>
             <div className="rounded-xl border border-border bg-card p-6">
@@ -109,8 +146,8 @@ export default function AnalyticsPage() {
                   +18%
                 </div>
               </div>
-              <p className="text-3xl font-bold text-foreground">125,420</p>
-              <p className="text-sm text-muted-foreground">Page Views</p>
+              <p className="text-3xl font-bold text-foreground">{(analytics?.overview?.totalPosts ?? 0).toLocaleString()}</p>
+              <p className="text-sm text-muted-foreground">Total Posts</p>
             </div>
             <div className="rounded-xl border border-border bg-card p-6">
               <div className="flex items-center justify-between mb-2">
@@ -120,8 +157,8 @@ export default function AnalyticsPage() {
                   -5%
                 </div>
               </div>
-              <p className="text-3xl font-bold text-foreground">2,340</p>
-              <p className="text-sm text-muted-foreground">Forum Posts</p>
+              <p className="text-3xl font-bold text-foreground">{analytics?.overview?.newUsersToday ?? 0}</p>
+              <p className="text-sm text-muted-foreground">New Users Today</p>
             </div>
           </div>
 
@@ -135,11 +172,11 @@ export default function AnalyticsPage() {
                 </h2>
               </div>
               <div className="flex items-end justify-between h-48 gap-2">
-                {weeklyDownloads.map((day) => (
+                {(analytics?.weeklyDownloads ?? []).map((day: any) => (
                   <div key={day.day} className="flex-1 flex flex-col items-center gap-2">
                     <div
                       className="w-full bg-primary/80 rounded-t-lg transition-all hover:bg-primary"
-                      style={{ height: `${(day.downloads / maxDownloads) * 100}%` }}
+                      style={{ height: `${(Math.max(1, day.downloads) / Math.max(1, maxDownloads)) * 100}%` }}
                     />
                     <span className="text-xs text-muted-foreground">{day.day}</span>
                   </div>
@@ -156,7 +193,7 @@ export default function AnalyticsPage() {
                 </h2>
               </div>
               <div className="space-y-4">
-                {categoryStats.map((cat, i) => (
+                {(analytics?.categoryStats ?? []).map((cat: any, i: number) => (
                   <div key={cat.name}>
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-sm text-foreground">{cat.name}</span>
@@ -195,24 +232,24 @@ export default function AnalyticsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {topAssets.map((asset, i) => (
-                    <tr key={asset.name} className="border-b border-border last:border-0">
+                  {(analytics?.topAssets ?? []).map((asset: any, i: number) => (
+                    <tr key={asset.title} className="border-b border-border last:border-0">
                       <td className="py-3 px-4">
                         <span
                           className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${
-                            i === 0
-                              ? "bg-warning/20 text-warning"
-                              : i === 1
-                                ? "bg-muted-foreground/20 text-muted-foreground"
-                                : i === 2
-                                  ? "bg-amber-600/20 text-amber-600"
-                                  : "bg-secondary text-muted-foreground"
+                          i === 0
+                            ? "bg-warning/20 text-warning"
+                            : i === 1
+                              ? "bg-muted-foreground/20 text-muted-foreground"
+                              : i === 2
+                                ? "bg-amber-600/20 text-amber-600"
+                                : "bg-secondary text-muted-foreground"
                           }`}
                         >
                           {i + 1}
                         </span>
                       </td>
-                      <td className="py-3 px-4 font-medium text-foreground">{asset.name}</td>
+                      <td className="py-3 px-4 font-medium text-foreground">{asset.title}</td>
                       <td className="py-3 px-4 text-muted-foreground">{asset.downloads.toLocaleString()}</td>
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-1 text-success">

@@ -14,11 +14,7 @@ import Image from "next/image"
 export default function AdminCoinsPage() {
   const { user, isAdmin } = useAuth()
   const router = useRouter()
-  const [users, setUsers] = useState([
-    { id: "1", username: "ServerOwner", avatar: "/gamer-avatar.png", coins: 500, membership: "vip" },
-    { id: "2", username: "MLOCreator", avatar: "/studio-avatar.jpg", coins: 1200, membership: "vip" },
-    { id: "3", username: "NewUser", avatar: "/placeholder.svg", coins: 50, membership: "free" },
-  ])
+  const [users, setUsers] = useState<any[]>([])
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedUser, setSelectedUser] = useState<any>(null)
   const [amount, setAmount] = useState("")
@@ -32,24 +28,49 @@ export default function AdminCoinsPage() {
     if (!isAdmin) router.push("/")
   }, [isAdmin, router])
 
+  useEffect(() => {
+    async function loadUsers() {
+      try {
+        const res = await fetch('/api/users')
+        const data = await res.json()
+        setUsers(data.users || [])
+      } catch (e) {}
+    }
+    loadUsers()
+  }, [])
+
   const handleAddCoins = async () => {
     if (!selectedUser || !amount) return
-    const newBalance = selectedUser.coins + parseInt(amount)
-    setUsers(users.map(u => u.id === selectedUser.id ? { ...u, coins: newBalance } : u))
-    setTransactions([{ id: Date.now().toString(), username: selectedUser.username, type: "add", amount: parseInt(amount), reason, date: new Date().toISOString().split('T')[0] }, ...transactions])
-    setSelectedUser(null)
-    setAmount("")
-    setReason("")
+    const res = await fetch('/api/admin/coins', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: selectedUser.id, amount: parseInt(amount), reason, action: 'add' })
+    })
+    const data = await res.json()
+    if (res.ok) {
+      setUsers(users.map(u => u.id === selectedUser.id ? { ...u, coins: data.totalCoins } : u))
+      setTransactions([{ id: Date.now().toString(), username: selectedUser.username, type: "add", amount: parseInt(amount), reason, date: new Date().toISOString().split('T')[0] }, ...transactions])
+      setSelectedUser(null)
+      setAmount("")
+      setReason("")
+    }
   }
 
   const handleRemoveCoins = async () => {
     if (!selectedUser || !amount) return
-    const newBalance = Math.max(0, selectedUser.coins - parseInt(amount))
-    setUsers(users.map(u => u.id === selectedUser.id ? { ...u, coins: newBalance } : u))
-    setTransactions([{ id: Date.now().toString(), username: selectedUser.username, type: "remove", amount: parseInt(amount), reason, date: new Date().toISOString().split('T')[0] }, ...transactions])
-    setSelectedUser(null)
-    setAmount("")
-    setReason("")
+    const res = await fetch('/api/admin/coins', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: selectedUser.id, amount: parseInt(amount), reason, action: 'remove' })
+    })
+    const data = await res.json()
+    if (res.ok) {
+      setUsers(users.map(u => u.id === selectedUser.id ? { ...u, coins: data.totalCoins } : u))
+      setTransactions([{ id: Date.now().toString(), username: selectedUser.username, type: "remove", amount: parseInt(amount), reason, date: new Date().toISOString().split('T')[0] }, ...transactions])
+      setSelectedUser(null)
+      setAmount("")
+      setReason("")
+    }
   }
 
   const filteredUsers = users.filter(u => u.username.toLowerCase().includes(searchQuery.toLowerCase()))

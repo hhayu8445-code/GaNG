@@ -54,7 +54,13 @@ export function Sidebar() {
       try {
         const res = await fetch("/api/stats")
         const data = await res.json()
-        setStats(data)
+        setStats({
+          onlineUsers: data.online ?? 0,
+          totalMembers: data.users,
+          totalAssets: data.assets,
+          totalDownloads: data.downloads,
+          totalPosts: data.posts,
+        })
       } catch (error) {
         console.error("Failed to fetch stats:", error)
       }

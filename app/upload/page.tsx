@@ -6,7 +6,7 @@ import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { useAuth } from "@/hooks/use-auth"
+import { useAuth } from "@/components/auth-provider"
 import { Upload, X, FileCode, Tag, Image as ImageIcon, CheckCircle, AlertTriangle, Coins, Link2, FileText, Zap } from "lucide-react"
 import { useRouter } from "next/navigation"
 

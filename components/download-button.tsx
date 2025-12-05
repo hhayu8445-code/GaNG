@@ -51,7 +51,7 @@ export function DownloadButton({ assetId, price, coinPrice = 0 }: DownloadButton
         return
       }
 
-      if (data.coinsDeducted) {
+      if ((data.coinsSpent || 0) > 0) {
         await refreshSession()
       }
 

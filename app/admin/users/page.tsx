@@ -1,3 +1,4 @@
+"use client"
 import { Sidebar } from "@/components/sidebar"
 import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
@@ -5,88 +6,57 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { ArrowLeft, Search, Filter, Edit, Trash2, Ban, Crown, Download, MessageSquare } from "lucide-react"
 import Link from "next/link"
-
-const mockUsers = [
-  {
-    id: "1",
-    username: "ServerOwner",
-    email: "owner@server.com",
-    avatar: "/gamer-avatar.png",
-    membership: "vip",
-    downloads: 45,
-    posts: 28,
-    reputation: 125,
-    status: "active",
-    createdAt: "2024-01-15",
-  },
-  {
-    id: "2",
-    username: "MLOCreator",
-    email: "creator@mlo.com",
-    avatar: "/studio-avatar.jpg",
-    membership: "vip",
-    downloads: 120,
-    posts: 67,
-    reputation: 250,
-    status: "active",
-    createdAt: "2024-01-05",
-  },
-  {
-    id: "3",
-    username: "NewServer",
-    email: "new@server.com",
-    avatar: "/gamer-avatar-blue.jpg",
-    membership: "free",
-    downloads: 5,
-    posts: 3,
-    reputation: 10,
-    status: "active",
-    createdAt: "2024-02-15",
-  },
-  {
-    id: "4",
-    username: "RPServer_Owner",
-    email: "rp@server.com",
-    avatar: "/gamer-avatar.png",
-    membership: "vip",
-    downloads: 89,
-    posts: 45,
-    reputation: 85,
-    status: "active",
-    createdAt: "2024-01-20",
-  },
-  {
-    id: "5",
-    username: "ScriptDev",
-    email: "dev@scripts.com",
-    avatar: "/gamer-avatar-blue.jpg",
-    membership: "free",
-    downloads: 12,
-    posts: 8,
-    reputation: 35,
-    status: "active",
-    createdAt: "2024-03-01",
-  },
-  {
-    id: "6",
-    username: "BannedUser",
-    email: "banned@example.com",
-    avatar: "/gamer-avatar.png",
-    membership: "free",
-    downloads: 2,
-    posts: 1,
-    reputation: -10,
-    status: "banned",
-    createdAt: "2024-02-20",
-  },
-]
+import { useEffect } from "react"
+import { useRouter } from "next/navigation"
+import { useAuth } from "@/components/auth-provider"
+import { useState } from "react"
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select"
+import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog"
+import { Toaster } from "@/components/ui/sonner"
+import { toast } from "sonner"
 
 export default function AdminUsersPage() {
+  const { isAdmin, isLoading } = useAuth()
+  const router = useRouter()
+  const [users, setUsers] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState("")
+
+  
+  useEffect(() => {
+    if (!isLoading && !isAdmin) {
+      router.push("/")
+    }
+  }, [isAdmin, isLoading, router])
+
+  useEffect(() => {
+    async function loadUsers() {
+      try {
+        const res = await fetch('/api/users')
+        const data = await res.json()
+        setUsers(data.users || [])
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadUsers()
+  }, [])
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="h-12 w-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
+
+  if (!isAdmin) return null
   return (
     <div className="min-h-screen bg-background">
       <Sidebar />
       <main className="ml-72">
         <Header />
+        <Toaster richColors closeButton />
         <div className="p-6">
           {/* Back Button */}
           <Link
@@ -109,7 +79,7 @@ export default function AdminUsersPage() {
           <div className="flex items-center gap-4 mb-6">
             <div className="relative flex-1 max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Search users..." className="pl-9 bg-secondary/50" />
+              <Input placeholder="Search users..." className="pl-9 bg-secondary/50" value={search} onChange={(e) => setSearch(e.target.value)} />
             </div>
             <Button variant="outline" className="gap-2 bg-transparent">
               <Filter className="h-4 w-4" />
@@ -145,7 +115,7 @@ export default function AdminUsersPage() {
                 </tr>
               </thead>
               <tbody>
-                {mockUsers.map((user) => (
+                {(loading ? [] : users.filter(u => u.username.toLowerCase().includes(search.toLowerCase()))).map((user) => (
                   <tr key={user.id} className="border-b border-border last:border-0 hover:bg-secondary/20">
                     <td className="py-4 px-4">
                       <div className="flex items-center gap-3">
@@ -173,6 +143,29 @@ export default function AdminUsersPage() {
                       >
                         {user.membership.toUpperCase()}
                       </Badge>
+                      <div className="mt-2">
+                        <Select
+                          value={user.membership}
+                          onValueChange={async (value) => {
+                          await fetch(`/api/admin/users/${user.id}`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ action: 'setMembership', membership: value })
+                          })
+                          setUsers(users.map(u => u.id === user.id ? { ...u, membership: value } : u))
+                          toast.success(`Membership updated to ${value.toUpperCase()} for ${user.username}`)
+                        }}
+                      >
+                          <SelectTrigger size="sm" className="bg-secondary/50">
+                            <SelectValue placeholder="Membership" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="free">Free</SelectItem>
+                            <SelectItem value="vip">VIP</SelectItem>
+                            <SelectItem value="admin">Admin</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </td>
                     <td className="py-4 px-4">
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
@@ -197,17 +190,94 @@ export default function AdminUsersPage() {
                     </td>
                     <td className="py-4 px-4 text-muted-foreground">{new Date(user.createdAt).toLocaleDateString()}</td>
                     <td className="py-4 px-4">
-                      <div className="flex items-center gap-1">
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <Ban className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={async () => {
+                    await fetch(`/api/admin/users/${user.id}`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ action: 'setMembership', membership: 'vip' })
+                    })
+                    setUsers(users.map(u => u.id === user.id ? { ...u, membership: 'vip' } : u))
+                  }}
+                >
+                  <Edit className="h-4 w-4" />
+                </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <Ban className="h-4 w-4" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>{user.status === 'banned' ? 'Unban User' : 'Ban User'}</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        {user.status === 'banned'
+                          ? `Allow ${user.username} to access the platform again?`
+                          : `Block ${user.username} from accessing the platform? You can undo later.`}
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={async () => {
+                          const willBan = user.status !== 'banned'
+                          const res = await fetch(`/api/admin/users/${user.id}`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ action: 'ban', ban: willBan })
+                          })
+                          const data = await res.json()
+                          if (res.ok) {
+                            setUsers(users.map(u => u.id === user.id ? { ...u, status: data.status } : u))
+                            toast.success(`${willBan ? 'User banned' : 'User unbanned'}: ${user.username}`)
+                          } else {
+                            toast.error(data.error || 'Failed to update ban status')
+                          }
+                        }}
+                      >
+                        {user.status === 'banned' ? 'Unban' : 'Ban'}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive">
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete User</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Are you sure you want to permanently delete <strong>{user.username}</strong>? This action cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={async () => {
+                          const res = await fetch(`/api/admin/users/${user.id}`, { method: 'DELETE' })
+                          if (res.ok) {
+                            setUsers(users.filter(u => u.id !== user.id))
+                            toast.success(`User deleted: ${user.username}`)
+                          } else {
+                            const data = await res.json()
+                            toast.error(data.error || 'Failed to delete user')
+                          }
+                        }}
+                      >
+                        Delete
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
                     </td>
                   </tr>
                 ))}

@@ -1,91 +1,36 @@
 import { NextResponse } from "next/server"
-import type { Asset } from "@/lib/types"
+import { prisma } from "@/lib/db"
 
-// Get trending assets (top downloads this week)
 export async function GET() {
-  // In production, this would fetch from database with time-based filtering
-  const trending: Asset[] = [
-    {
-      id: "4",
-      title: "Electron Anti-Cheat V7",
-      description: "Enterprise-grade anti-cheat with real-time detection and ban management.",
-      category: "scripts",
-      framework: "standalone",
-      version: "7.0.0",
-      price: "premium",
-      coinPrice: 300,
-      image: "/anticheat-security-shield.jpg",
-      downloads: 35000,
-      rating: 4.8,
-      author: "ElectronSecurity",
-      authorId: "user4",
-      createdAt: "2025-03-01T00:00:00Z",
-      updatedAt: "2025-12-04T00:00:00Z",
-      tags: ["anticheat", "security"],
-      isVerified: true,
-      isFeatured: true,
-    },
-    {
-      id: "13",
-      title: "QBox Core Framework",
-      description: "Modern FiveM framework built on QBCore with enhanced features.",
-      category: "scripts",
-      framework: "qbox",
-      version: "1.0.0",
-      price: "free",
-      coinPrice: 0,
-      image: "https://www.qbox.re/static/screenshots/qbox-logo2.png",
-      downloads: 45000,
-      rating: 4.9,
-      author: "QBox Team",
-      authorId: "qbox",
-      createdAt: "2025-01-01T00:00:00Z",
-      updatedAt: "2025-12-04T00:00:00Z",
-      tags: ["framework", "qbox"],
-      isVerified: true,
-      isFeatured: true,
-    },
-    {
-      id: "3",
-      title: "Character Customization Pro",
-      description: "Full character customization with clothing stores and barbershops.",
-      category: "scripts",
-      framework: "standalone",
-      version: "4.2.0",
-      price: "free",
-      coinPrice: 0,
-      image: "/character-customization-ui.jpg",
-      downloads: 21500,
-      rating: 4.9,
-      author: "PrismDev",
-      authorId: "user3",
-      createdAt: "2025-01-20T00:00:00Z",
-      updatedAt: "2025-12-03T00:00:00Z",
-      tags: ["appearance", "clothing"],
-      isVerified: true,
-      isFeatured: true,
-    },
-    {
-      id: "11",
-      title: "BMW M5 F90 Competition",
-      description: "High-quality BMW M5 with accurate handling and custom sound.",
-      category: "vehicles",
-      framework: "standalone",
-      version: "1.0.0",
-      price: "free",
-      coinPrice: 0,
-      image: "/bmw-m5-f90-gta-style.jpg",
-      downloads: 23400,
-      rating: 4.9,
-      author: "AutoMods",
-      authorId: "user2",
-      createdAt: "2025-03-15T00:00:00Z",
-      updatedAt: "2025-12-01T00:00:00Z",
-      tags: ["bmw", "sedan"],
-      isVerified: true,
-      isFeatured: true,
-    },
-  ]
+  try {
+    const assets = await prisma.asset.findMany({
+      where: { status: 'active' },
+      include: {
+        author: {
+          select: {
+            username: true,
+            avatar: true,
+            membership: true
+          }
+        }
+      },
+      orderBy: { downloads: 'desc' },
+      take: 4
+    })
 
-  return NextResponse.json(trending)
+    const formatted = assets.map(asset => ({
+      ...asset,
+      price: asset.coinPrice === 0 ? "free" : "premium",
+      author: asset.author.username,
+      rating: 4.8,
+      isVerified: true,
+      isFeatured: asset.downloads > 10000,
+      image: asset.thumbnail,
+    }))
+
+    return NextResponse.json(formatted)
+  } catch (error) {
+    console.error('Trending API error:', error)
+    return NextResponse.json([])
+  }
 }

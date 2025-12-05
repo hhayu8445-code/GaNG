@@ -2,9 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
-import { writeFile, mkdir } from 'fs/promises'
-import { join } from 'path'
-import { existsSync } from 'fs'
 
 export async function POST(request: NextRequest) {
   try {
@@ -26,23 +23,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    // Create uploads directory if it doesn't exist
-    const uploadsDir = join(process.cwd(), 'public', 'uploads')
-    if (!existsSync(uploadsDir)) {
-      await mkdir(uploadsDir, { recursive: true })
-    }
-
-    // Generate unique filename
-    const timestamp = Date.now()
-    const filename = `${timestamp}-${file.name}`
-    const filepath = join(uploadsDir, filename)
-
-    // Save file
-    const bytes = await file.arrayBuffer()
-    const buffer = Buffer.from(bytes)
-    await writeFile(filepath, buffer)
-
-    // Create asset in database
+    // Create asset in database (file stored externally)
     const asset = await prisma.asset.create({
       data: {
         title,
@@ -50,7 +31,7 @@ export async function POST(request: NextRequest) {
         category,
         framework,
         coinPrice,
-        downloadLink: `/uploads/${filename}`,
+        downloadLink: `https://example.com/download/${file.name}`,
         thumbnail: `/placeholder.jpg`,
         tags,
         fileSize: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
@@ -76,6 +57,6 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error('Upload error:', error)
-    return NextResponse.json({ error: 'Upload failed' }, { status: 500 })
+    return NextResponse.json({ error: 'Upload failed', details: String(error) }, { status: 500 })
   }
 }

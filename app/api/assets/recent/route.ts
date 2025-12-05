@@ -1,89 +1,36 @@
 import { NextResponse } from "next/server"
-import type { Asset } from "@/lib/types"
+import { prisma } from "@/lib/db"
 
 export async function GET() {
-  const recent: Asset[] = [
-    {
-      id: "14",
-      title: "Advanced MDT System",
-      description: "Police MDT with vehicle registration, warrant system, and BOLO management.",
-      category: "scripts",
-      framework: "qbcore",
-      version: "2.0.0",
-      price: "premium",
-      coinPrice: 150,
-      image: "/police-mdt-computer.jpg",
-      downloads: 12300,
-      rating: 4.8,
-      author: "LEScripts",
-      authorId: "user9",
-      createdAt: "2025-12-03T00:00:00Z",
-      updatedAt: "2025-12-03T00:00:00Z",
-      tags: ["police", "mdt"],
-      isVerified: true,
-      isFeatured: true,
-    },
-    {
-      id: "8",
-      title: "Pillbox Hospital MLO",
-      description: "Fully detailed hospital interior with emergency room and operating rooms.",
-      category: "mlo",
-      framework: "standalone",
-      version: "1.8.0",
-      price: "premium",
-      coinPrice: 200,
-      image: "/hospital-interior-gta-mlo.jpg",
-      downloads: 6200,
-      rating: 4.9,
-      author: "MLOStudio",
-      authorId: "user5",
-      createdAt: "2025-11-28T00:00:00Z",
-      updatedAt: "2025-11-28T00:00:00Z",
-      tags: ["hospital", "mlo"],
-      isVerified: true,
-      isFeatured: true,
-    },
-    {
-      id: "9",
-      title: "Multi-Level Garage System",
-      description: "Advanced garage with multi-level storage and tuning shop.",
-      category: "scripts",
-      framework: "esx",
-      version: "2.1.0",
-      price: "free",
-      coinPrice: 0,
-      image: "/garage-system-gta.jpg",
-      downloads: 15600,
-      rating: 4.7,
-      author: "GarageScripts",
-      authorId: "user7",
-      createdAt: "2025-12-02T00:00:00Z",
-      updatedAt: "2025-12-02T00:00:00Z",
-      tags: ["garage", "vehicles"],
-      isVerified: true,
-      isFeatured: false,
-    },
-    {
-      id: "1",
-      title: "Advanced Banking System",
-      description: "Complete banking system with ATM, bank robbery, and wire transfers.",
-      category: "scripts",
-      framework: "qbcore",
-      version: "2.5.0",
-      price: "free",
-      coinPrice: 0,
-      image: "/banking-system-ui-dark-theme.jpg",
-      downloads: 12580,
-      rating: 4.9,
-      author: "FiveM Tools Team",
-      authorId: "admin",
-      createdAt: "2025-12-01T00:00:00Z",
-      updatedAt: "2025-12-01T00:00:00Z",
-      tags: ["banking", "economy"],
-      isVerified: true,
-      isFeatured: true,
-    },
-  ]
+  try {
+    const assets = await prisma.asset.findMany({
+      where: { status: 'active' },
+      include: {
+        author: {
+          select: {
+            username: true,
+            avatar: true,
+            membership: true
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 4
+    })
 
-  return NextResponse.json(recent)
+    const formatted = assets.map(asset => ({
+      ...asset,
+      price: asset.coinPrice === 0 ? "free" : "premium",
+      author: asset.author.username,
+      rating: 4.8,
+      isVerified: true,
+      isFeatured: asset.downloads > 10000,
+      image: asset.thumbnail,
+    }))
+
+    return NextResponse.json(formatted)
+  } catch (error) {
+    console.error('Recent API error:', error)
+    return NextResponse.json([])
+  }
 }
