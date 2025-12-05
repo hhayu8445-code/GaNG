@@ -6,7 +6,7 @@ import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { useAuth } from "@/components/auth-provider"
+import { useAuth } from "@/hooks/use-auth"
 import { Upload, X, FileCode, Tag, Image as ImageIcon, CheckCircle, AlertTriangle, Coins, Link2, FileText, Zap } from "lucide-react"
 import { useRouter } from "next/navigation"
 
@@ -82,16 +82,29 @@ export default function UploadPage() {
     if (formData.image) uploadData.append("image", formData.image)
 
     try {
+      const uploadFormData = new FormData()
+      uploadFormData.append('file', file)
+      uploadFormData.append('title', formData.title)
+      uploadFormData.append('description', formData.description)
+      uploadFormData.append('category', formData.category)
+      uploadFormData.append('framework', formData.framework)
+      uploadFormData.append('coinPrice', formData.coinPrice.toString())
+      uploadFormData.append('tags', JSON.stringify(formData.tags))
+
       const res = await fetch("/api/upload/asset", {
         method: "POST",
-        body: uploadData,
+        body: uploadFormData,
       })
       const data = await res.json()
       if (data.success) {
-        router.push(`/asset/${data.assetId}`)
+        alert('Asset uploaded successfully!')
+        router.push(`/asset/${data.asset.id}`)
+      } else {
+        alert('Upload failed: ' + data.error)
       }
     } catch (error) {
       console.error(error)
+      alert('Upload failed')
     } finally {
       setIsUploading(false)
     }
