@@ -28,6 +28,7 @@ export interface SessionUser {
   avatar: string
   membership: "free" | "vip" | "admin"
   isAdmin: boolean
+  coins: number
   accessToken: string
   refreshToken: string
   expiresAt: number

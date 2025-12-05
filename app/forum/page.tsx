@@ -66,69 +66,33 @@ export default function ForumPage() {
   const [searchQuery, setSearchQuery] = useState("")
 
   useEffect(() => {
-    // Simulate fetching threads from API
     const fetchThreads = async () => {
       setIsLoading(true)
-      // In production, this would be an API call
-      await new Promise((resolve) => setTimeout(resolve, 500))
-      setThreads([
-        {
-          id: "1",
-          title: "Welcome to FiveM Tools V7 Community!",
-          category: "Announcements",
-          author: { username: "FiveM Admin", avatar: "/admin-avatar-purple.jpg", membership: "admin" },
-          replies: 156,
-          likes: 423,
-          views: 8520,
-          isPinned: true,
-          createdAt: "2025-01-01",
-        },
-        {
-          id: "2",
-          title: "New Feature: Real-time Forum Updates & Live Notifications",
-          category: "Announcements",
-          author: { username: "FiveM Admin", avatar: "/admin-avatar-purple.jpg", membership: "admin" },
-          replies: 89,
-          likes: 312,
-          views: 4250,
-          isPinned: true,
-          createdAt: "2025-12-01",
-        },
-        {
-          id: "3",
-          title: "How to properly install QBCore scripts?",
-          category: "Help & Support",
-          author: { username: "ServerOwner_RP", avatar: "/gamer-avatar.png", membership: "vip" },
-          replies: 45,
-          likes: 78,
-          views: 1890,
-          isPinned: false,
-          createdAt: "2025-12-03",
-        },
-        {
-          id: "4",
-          title: "[REQUEST] Advanced Police MDT with CAD Integration",
-          category: "Script Requests",
-          author: { username: "LEDeveloper", avatar: "/gamer-avatar-blue.jpg", membership: "vip" },
-          replies: 67,
-          likes: 156,
-          views: 3420,
-          isPinned: false,
-          createdAt: "2025-12-02",
-        },
-        {
-          id: "5",
-          title: "Showcase: My Custom Hospital MLO Interior",
-          category: "Showcase",
-          author: { username: "MLOCreator", avatar: "/studio-avatar.jpg", membership: "vip" },
-          replies: 134,
-          likes: 289,
-          views: 5670,
-          isPinned: false,
-          createdAt: "2025-12-04",
-        },
-      ])
-      setIsLoading(false)
+      try {
+        const res = await fetch("/api/forum/threads")
+        const data = await res.json()
+        if (data.threads) {
+          setThreads(data.threads.map((t: any) => ({
+            id: t.id,
+            title: t.title,
+            category: t.categoryId,
+            author: {
+              username: t.author.username,
+              avatar: t.author.avatar || "/placeholder-user.jpg",
+              membership: t.author.membership || "free"
+            },
+            replies: t.replies?.length || 0,
+            likes: t.likes || 0,
+            views: t.views || 0,
+            isPinned: t.isPinned || false,
+            createdAt: t.createdAt
+          })))
+        }
+      } catch (error) {
+        console.error("Failed to fetch threads:", error)
+      } finally {
+        setIsLoading(false)
+      }
     }
     fetchThreads()
   }, [])

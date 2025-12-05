@@ -2,8 +2,8 @@ import { Sidebar } from "@/components/sidebar"
 import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { DownloadButton } from "@/components/download-button"
 import type { Asset } from "@/lib/types"
-import { assets } from "@/app/api/assets/route"
 import {
   Download,
   Star,
@@ -18,14 +18,25 @@ import {
   Clock,
   Shield,
   ExternalLink,
+  Coins,
 } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import { notFound } from "next/navigation"
 
-export default function AssetPage({ params }: { params: { id: string } }) {
+async function getAsset(id: string) {
+  try {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/assets/${id}`, { cache: 'no-store' })
+    if (!res.ok) return null
+    return res.json()
+  } catch {
+    return null
+  }
+}
+
+export default async function AssetPage({ params }: { params: { id: string } }) {
   const { id } = params
-  const asset = (assets as Asset[]).find((a) => a.id === id)
+  const asset = await getAsset(id)
   if (!asset) {
     notFound()
   }
@@ -116,7 +127,7 @@ export default function AssetPage({ params }: { params: { id: string } }) {
 
                 {/* Tags */}
                 <div className="flex flex-wrap gap-2 mt-4">
-                  {asset.tags.map((tag) => (
+                  {asset.tags.map((tag: string) => (
                     <Badge key={tag} variant="secondary" className="gap-1 rounded-lg bg-secondary/50">
                       <Tag className="h-3 w-3" />
                       {tag}
@@ -169,13 +180,18 @@ export default function AssetPage({ params }: { params: { id: string } }) {
                     {asset.version}
                   </Badge>
                 </div>
-                <Button
-                  className="w-full bg-primary hover:bg-primary/90 gap-2 rounded-xl h-12 text-base glow-sm"
-                  size="lg"
-                >
-                  <Download className="h-5 w-5" />
-                  Download Now
-                </Button>
+                {asset.price === "premium" && asset.coinPrice && (
+                  <div className="mb-4 p-3 rounded-xl bg-warning/10 border border-warning/30">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Price</span>
+                      <span className="text-lg font-bold text-warning flex items-center gap-1">
+                        <img src="https://i.gifer.com/origin/e0/e02ce86bcfd6d1d6c2f775afb3ec8c01_w200.gif" alt="Coins" className="h-5 w-5" />
+                        {asset.coinPrice}
+                      </span>
+                    </div>
+                  </div>
+                )}
+                <DownloadButton assetId={asset.id} price={asset.price} coinPrice={asset.coinPrice} />
                 <div className="flex gap-2 mt-3">
                   <Button variant="outline" size="sm" className="flex-1 gap-1.5 rounded-xl bg-transparent h-10">
                     <Heart className="h-4 w-4" />

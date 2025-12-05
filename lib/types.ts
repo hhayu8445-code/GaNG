@@ -13,6 +13,7 @@ export interface Asset {
   framework: Framework
   version: string
   price: "free" | "premium"
+  coinPrice: number
   image: string
   downloads: number
   rating: number
@@ -26,6 +27,9 @@ export interface Asset {
   changelog?: string
   isVerified: boolean
   isFeatured: boolean
+  virusScanStatus?: "pending" | "clean" | "threat"
+  virusScanHash?: string
+  downloadLink?: string
 }
 
 export interface User {
@@ -38,11 +42,13 @@ export interface User {
   downloads: number
   reputation: number
   points: number
+  coins: number
   achievements: Achievement[]
   createdAt: string
   lastSeen: string
   isBanned: boolean
   banReason?: string
+  isAdmin?: boolean
 }
 
 export interface Achievement {

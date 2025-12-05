@@ -1,0 +1,150 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("PRISMA_DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(cuid())
+  discordId     String   @unique
+  username      String
+  email         String?
+  avatar        String?
+  membership    String   @default("free")
+  coins         Int      @default(100)
+  isAdmin       Boolean  @default(false)
+  isBanned      Boolean  @default(false)
+  bannedAt      DateTime?
+  bannedBy      String?
+  lastDailyClaim DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  assets        Asset[]
+  downloads     Download[]
+  coinTransactions CoinTransaction[]
+  reports       Report[]
+  forumThreads  ForumThread[]
+  forumReplies  ForumReply[]
+
+  @@index([discordId])
+  @@index([username])
+}
+
+model Asset {
+  id              String   @id @default(cuid())
+  title           String
+  description     String   @db.Text
+  category        String
+  framework       String
+  coinPrice       Int      @default(0)
+  downloadLink    String
+  thumbnail       String
+  tags            String[]
+  version         String   @default("1.0.0")
+  requirements    String?  @db.Text
+  changelog       String?  @db.Text
+  fileSize        String?
+  downloads       Int      @default(0)
+  likes           Int      @default(0)
+  views           Int      @default(0)
+  status          String   @default("active")
+  virusScanStatus String   @default("pending")
+  virusScanHash   String?
+  authorId        String
+  author          User     @relation(fields: [authorId], references: [discordId])
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  downloadRecords Download[]
+
+  @@unique([title, authorId])
+  @@index([authorId])
+  @@index([category])
+  @@index([framework])
+  @@index([status])
+}
+
+model Download {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [discordId])
+  assetId   String
+  asset     Asset    @relation(fields: [assetId], references: [id])
+  coinSpent Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([assetId])
+}
+
+model CoinTransaction {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [discordId])
+  amount      Int
+  type        String
+  description String?
+  adminId     String?
+  ipAddress   String?
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([type])
+}
+
+model Report {
+  id         String   @id @default(cuid())
+  type       String
+  reason     String   @db.Text
+  target     String
+  targetId   String?
+  status     String   @default("pending")
+  notes      String?  @db.Text
+  reporterId String
+  reporter   User     @relation(fields: [reporterId], references: [discordId])
+  resolvedAt DateTime?
+  resolvedBy String?
+  createdAt  DateTime @default(now())
+
+  @@index([reporterId])
+  @@index([status])
+}
+
+model ForumThread {
+  id          String   @id @default(cuid())
+  title       String
+  content     String   @db.Text
+  categoryId  String
+  authorId    String
+  author      User     @relation(fields: [authorId], references: [discordId])
+  views       Int      @default(0)
+  likes       Int      @default(0)
+  isPinned    Boolean  @default(false)
+  isLocked    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  replies     ForumReply[]
+
+  @@index([authorId])
+  @@index([categoryId])
+}
+
+model ForumReply {
+  id        String   @id @default(cuid())
+  content   String   @db.Text
+  threadId  String
+  thread    ForumThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [discordId])
+  likes     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([threadId])
+  @@index([authorId])
+}

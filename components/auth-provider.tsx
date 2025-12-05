@@ -3,13 +3,15 @@
 import { useEffect, createContext, useContext, type ReactNode } from "react"
 import { useAuthStore } from "@/lib/store"
 import type { SessionUser } from "@/lib/auth"
+import type { User } from "@/lib/types"
 
 interface AuthContextType {
-  user: SessionUser | null
+  user: any
   isLoading: boolean
   isAdmin: boolean
   login: () => void
   logout: () => void
+  refreshSession: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | null>(null)
@@ -17,18 +19,21 @@ const AuthContext = createContext<AuthContextType | null>(null)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { user, isLoading, setUser, setLoading, logout } = useAuthStore()
 
-  useEffect(() => {
-    async function checkSession() {
-      try {
-        const response = await fetch("/api/auth/session")
-        const data = await response.json()
-        setUser(data.user)
-      } catch (error) {
-        console.error("Session check failed:", error)
-        setUser(null)
-      }
+  const checkSession = async () => {
+    try {
+      const response = await fetch("/api/auth/session", { cache: 'no-store' })
+      const data = await response.json()
+      setUser(data.user)
+    } catch (error) {
+      console.error("Session check failed:", error)
+      setUser(null)
     }
+  }
+
+  useEffect(() => {
     checkSession()
+    const interval = setInterval(checkSession, 5000)
+    return () => clearInterval(interval)
   }, [setUser])
 
   const login = () => {
@@ -49,6 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAdmin: user?.isAdmin ?? false,
         login,
         logout: handleLogout,
+        refreshSession: checkSession,
       }}
     >
       {children}

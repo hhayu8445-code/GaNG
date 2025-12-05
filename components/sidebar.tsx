@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils"
 import { SITE_LOGO, SITE_NAME } from "@/lib/constants"
 import { useAuth } from "@/components/auth-provider"
 import { useStatsStore } from "@/lib/store"
+import { DailyCoinsButton } from "@/components/daily-coins-button"
 import {
   MessageSquare,
   Compass,
@@ -22,6 +23,8 @@ import {
   Shield,
   ChevronLeft,
   Users,
+  Upload,
+  Coins,
 } from "lucide-react"
 
 const navItems = [
@@ -35,6 +38,7 @@ const navItems = [
   { label: "Membership", href: "/membership", icon: Crown },
   { label: "Decrypt CFX V7", href: "/decrypt", icon: Key },
   { label: "Upvotes Server", href: "/upvotes", icon: Rocket },
+  { label: "Upload Asset", href: "/upload", icon: Upload, badge: "NEW" },
 ]
 
 export function Sidebar() {
@@ -201,6 +205,22 @@ export function Sidebar() {
                   <p className="text-[10px] text-muted-foreground">Members</p>
                 </div>
               </div>
+              {user && (
+                <>
+                  <div className="mt-3 rounded-lg bg-gradient-to-r from-warning/20 to-chart-5/20 border border-warning/30 p-2.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <img src="https://i.gifer.com/origin/e0/e02ce86bcfd6d1d6c2f775afb3ec8c01_w200.gif" alt="Coins" className="h-5 w-5" />
+                        <span className="text-xs font-medium text-foreground">Coins</span>
+                      </div>
+                      <span className="text-sm font-bold text-warning">{user.coins || 0}</span>
+                    </div>
+                  </div>
+                  <div className="mt-2">
+                    <DailyCoinsButton />
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}

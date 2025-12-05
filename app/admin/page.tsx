@@ -6,6 +6,7 @@ import { Sidebar } from "@/components/sidebar"
 import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { AddAssetModal } from "@/components/add-asset-modal"
 import { useAuth } from "@/components/auth-provider"
 import { useStatsStore } from "@/lib/store"
 import {
@@ -53,6 +54,7 @@ export default function AdminPage() {
   const router = useRouter()
   const [users, setUsers] = useState<AdminUser[]>([])
   const [reports, setReports] = useState<Report[]>([])
+  const [showAddAsset, setShowAddAsset] = useState(false)
 
   useEffect(() => {
     if (!isLoading && (!user || !isAdmin)) {
@@ -341,8 +343,14 @@ export default function AdminPage() {
               <Package className="h-5 w-5 text-primary" />
               Quick Actions
             </h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <Button variant="outline" className="h-auto py-4 flex-col gap-2 rounded-xl bg-transparent">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              <Link href="/admin/coins" className="w-full">
+                <Button variant="outline" className="w-full h-auto py-4 flex-col gap-2 rounded-xl bg-transparent">
+                  <img src="https://i.gifer.com/origin/e0/e02ce86bcfd6d1d6c2f775afb3ec8c01_w200.gif" alt="Coins" className="h-6 w-6" />
+                  <span>Manage Coins</span>
+                </Button>
+              </Link>
+              <Button onClick={() => setShowAddAsset(true)} variant="outline" className="h-auto py-4 flex-col gap-2 rounded-xl bg-transparent">
                 <Plus className="h-5 w-5 text-primary" />
                 <span>Add Asset</span>
               </Button>
@@ -362,6 +370,7 @@ export default function AdminPage() {
           </div>
         </div>
       </main>
+      <AddAssetModal open={showAddAsset} onOpenChange={setShowAddAsset} />
     </div>
   )
 }

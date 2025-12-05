@@ -1,0 +1,211 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
+import { Sidebar } from "@/components/sidebar"
+import { Header } from "@/components/header"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Badge } from "@/components/ui/badge"
+import { useAuth } from "@/components/auth-provider"
+import { Plus, Minus, Search, TrendingUp, Users, DollarSign, History } from "lucide-react"
+import Image from "next/image"
+
+export default function AdminCoinsPage() {
+  const { user, isAdmin } = useAuth()
+  const router = useRouter()
+  const [users, setUsers] = useState([
+    { id: "1", username: "ServerOwner", avatar: "/gamer-avatar.png", coins: 500, membership: "vip" },
+    { id: "2", username: "MLOCreator", avatar: "/studio-avatar.jpg", coins: 1200, membership: "vip" },
+    { id: "3", username: "NewUser", avatar: "/placeholder.svg", coins: 50, membership: "free" },
+  ])
+  const [searchQuery, setSearchQuery] = useState("")
+  const [selectedUser, setSelectedUser] = useState<any>(null)
+  const [amount, setAmount] = useState("")
+  const [reason, setReason] = useState("")
+  const [transactions, setTransactions] = useState([
+    { id: "1", username: "ServerOwner", type: "add", amount: 100, reason: "Monthly bonus", date: "2025-01-15" },
+    { id: "2", username: "MLOCreator", type: "remove", amount: 50, reason: "Refund", date: "2025-01-14" },
+  ])
+
+  useEffect(() => {
+    if (!isAdmin) router.push("/")
+  }, [isAdmin, router])
+
+  const handleAddCoins = async () => {
+    if (!selectedUser || !amount) return
+    const newBalance = selectedUser.coins + parseInt(amount)
+    setUsers(users.map(u => u.id === selectedUser.id ? { ...u, coins: newBalance } : u))
+    setTransactions([{ id: Date.now().toString(), username: selectedUser.username, type: "add", amount: parseInt(amount), reason, date: new Date().toISOString().split('T')[0] }, ...transactions])
+    setSelectedUser(null)
+    setAmount("")
+    setReason("")
+  }
+
+  const handleRemoveCoins = async () => {
+    if (!selectedUser || !amount) return
+    const newBalance = Math.max(0, selectedUser.coins - parseInt(amount))
+    setUsers(users.map(u => u.id === selectedUser.id ? { ...u, coins: newBalance } : u))
+    setTransactions([{ id: Date.now().toString(), username: selectedUser.username, type: "remove", amount: parseInt(amount), reason, date: new Date().toISOString().split('T')[0] }, ...transactions])
+    setSelectedUser(null)
+    setAmount("")
+    setReason("")
+  }
+
+  const filteredUsers = users.filter(u => u.username.toLowerCase().includes(searchQuery.toLowerCase()))
+  const totalCoins = users.reduce((sum, u) => sum + u.coins, 0)
+
+  if (!isAdmin) return null
+
+  return (
+    <div className="min-h-screen bg-background">
+      <Sidebar />
+      <main className="ml-72">
+        <Header />
+        <div className="p-6">
+          <div className="mb-8">
+            <div className="flex items-center gap-4 mb-3">
+              <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-warning to-chart-5 flex items-center justify-center glow-sm">
+                <Image src="https://i.gifer.com/origin/e0/e02ce86bcfd6d1d6c2f775afb3ec8c01_w200.gif" alt="Coins" width={40} height={40} unoptimized />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-foreground">Coin Management</h1>
+                <p className="text-muted-foreground">Manage user coins and transactions</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            <div className="glass rounded-2xl p-5">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="h-10 w-10 rounded-xl bg-warning/20 flex items-center justify-center">
+                  <DollarSign className="h-5 w-5 text-warning" />
+                </div>
+                <span className="text-sm text-muted-foreground">Total Coins</span>
+              </div>
+              <p className="text-3xl font-bold text-foreground">{totalCoins.toLocaleString()}</p>
+            </div>
+            <div className="glass rounded-2xl p-5">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="h-10 w-10 rounded-xl bg-primary/20 flex items-center justify-center">
+                  <Users className="h-5 w-5 text-primary" />
+                </div>
+                <span className="text-sm text-muted-foreground">Total Users</span>
+              </div>
+              <p className="text-3xl font-bold text-foreground">{users.length}</p>
+            </div>
+            <div className="glass rounded-2xl p-5">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="h-10 w-10 rounded-xl bg-success/20 flex items-center justify-center">
+                  <TrendingUp className="h-5 w-5 text-success" />
+                </div>
+                <span className="text-sm text-muted-foreground">Transactions</span>
+              </div>
+              <p className="text-3xl font-bold text-foreground">{transactions.length}</p>
+            </div>
+          </div>
+
+          <div className="grid lg:grid-cols-2 gap-6">
+            <div className="glass rounded-2xl p-6">
+              <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+                <Users className="h-5 w-5 text-primary" />
+                User List
+              </h2>
+              <div className="mb-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input placeholder="Search users..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-10 bg-secondary/50 border-border/50 rounded-xl" />
+                </div>
+              </div>
+              <div className="space-y-3 max-h-[500px] overflow-y-auto scrollbar-thin">
+                {filteredUsers.map((u) => (
+                  <div key={u.id} className={`flex items-center justify-between p-4 rounded-xl transition-all cursor-pointer ${selectedUser?.id === u.id ? "bg-primary/20 border-2 border-primary" : "bg-secondary/30 hover:bg-secondary/50"}`} onClick={() => setSelectedUser(u)}>
+                    <div className="flex items-center gap-3">
+                      <img src={u.avatar} alt={u.username} className="h-10 w-10 rounded-xl object-cover" />
+                      <div>
+                        <p className="font-medium text-foreground">{u.username}</p>
+                        <Badge variant="secondary" className="text-xs">{u.membership}</Badge>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Image src="https://i.gifer.com/origin/e0/e02ce86bcfd6d1d6c2f775afb3ec8c01_w200.gif" alt="Coins" width={20} height={20} unoptimized />
+                      <span className="text-lg font-bold text-warning">{u.coins}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              <div className="glass rounded-2xl p-6">
+                <h2 className="text-lg font-semibold text-foreground mb-4">Manage Coins</h2>
+                {selectedUser ? (
+                  <div className="space-y-4">
+                    <div className="p-4 rounded-xl bg-secondary/30 border border-border/50">
+                      <div className="flex items-center gap-3 mb-2">
+                        <img src={selectedUser.avatar} alt={selectedUser.username} className="h-12 w-12 rounded-xl" />
+                        <div>
+                          <p className="font-semibold text-foreground">{selectedUser.username}</p>
+                          <div className="flex items-center gap-2">
+                            <Image src="https://i.gifer.com/origin/e0/e02ce86bcfd6d1d6c2f775afb3ec8c01_w200.gif" alt="Coins" width={16} height={16} unoptimized />
+                            <span className="text-sm text-warning font-bold">{selectedUser.coins} coins</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-2">Amount</label>
+                      <Input type="number" placeholder="Enter amount" value={amount} onChange={(e) => setAmount(e.target.value)} className="bg-secondary/50 border-border/50 rounded-xl" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-2">Reason</label>
+                      <Input placeholder="Transaction reason" value={reason} onChange={(e) => setReason(e.target.value)} className="bg-secondary/50 border-border/50 rounded-xl" />
+                    </div>
+                    <div className="flex gap-3">
+                      <Button onClick={handleAddCoins} disabled={!amount} className="flex-1 bg-success hover:bg-success/90 rounded-xl gap-2">
+                        <Plus className="h-4 w-4" />
+                        Add Coins
+                      </Button>
+                      <Button onClick={handleRemoveCoins} disabled={!amount} variant="destructive" className="flex-1 rounded-xl gap-2">
+                        <Minus className="h-4 w-4" />
+                        Remove Coins
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <Users className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                    <p className="text-muted-foreground">Select a user to manage coins</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="glass rounded-2xl p-6">
+                <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+                  <History className="h-5 w-5 text-primary" />
+                  Recent Transactions
+                </h2>
+                <div className="space-y-3 max-h-[300px] overflow-y-auto scrollbar-thin">
+                  {transactions.map((t) => (
+                    <div key={t.id} className="flex items-center justify-between p-3 rounded-xl bg-secondary/30">
+                      <div>
+                        <p className="font-medium text-foreground text-sm">{t.username}</p>
+                        <p className="text-xs text-muted-foreground">{t.reason || "No reason"}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className={`font-bold ${t.type === "add" ? "text-success" : "text-destructive"}`}>
+                          {t.type === "add" ? "+" : "-"}{t.amount}
+                        </p>
+                        <p className="text-xs text-muted-foreground">{t.date}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  )
+}

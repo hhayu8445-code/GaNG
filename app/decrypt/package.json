@@ -1,0 +1,40 @@
+{
+    "name": "udg-decrypt-bot",
+    "version": "6.0.0",
+    "description": "UDG V 6.0 Decrypt Bot - A powerful FiveM resource decryption bot for Discord with web interface",
+    "main": "index.js",
+    "scripts": {
+        "start": "node index.js",
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "keywords": [
+        "fivem",
+        "decrypt",
+        "discord",
+        "bot",
+        "udg"
+    ],
+    "author": "UDG Team",
+    "license": "ISC",
+    "homepage": "https://discord.gg/ajUReRDKv2",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/udg/decrypt-bot"
+    },
+    "bugs": {
+        "url": "https://discord.gg/ajUReRDKv2"
+    },
+    "dependencies": {
+        "adm-zip": "^0.5.16",
+        "archiver": "^7.0.1",
+        "axios": "^1.9.0",
+        "chacha20": "^0.1.4",
+        "discord.js": "^14.14.1",
+        "express": "^5.1.0",
+        "https-proxy-agent": "^7.0.6",
+        "uuid": "^9.0.0"
+    },
+    "engines": {
+        "node": ">=18.0.0"
+    }
+}
