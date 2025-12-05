@@ -1,28 +1,40 @@
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from 'next/server'
+import { prisma } from '@/lib/db'
 
-const mockUsers = [
-  {
-    id: "user1",
-    username: "ServerOwner",
-    email: "owner@server.com",
-    avatar: "/gamer-avatar.png",
-    discordId: "123456789",
-    membership: "vip",
-    downloads: 45,
-    reputation: 125,
-    points: 680,
-    bio: "FiveM server owner since 2020.",
-    createdAt: "2024-01-15",
-  },
-]
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params
+    
+    const user = await prisma.user.findUnique({
+      where: { discordId: id },
+      select: {
+        id: true,
+        discordId: true,
+        username: true,
+        avatar: true,
+        membership: true,
+        coins: true,
+        createdAt: true,
+        _count: {
+          select: {
+            assets: true,
+            downloads: true,
+            forumThreads: true,
+            forumReplies: true
+          }
+        }
+      }
+    })
 
-export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params
-  const user = mockUsers.find((u) => u.id === id)
-  
-  if (!user) {
-    return NextResponse.json({ error: "User not found" }, { status: 404 })
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+
+    return NextResponse.json(user)
+  } catch (error) {
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-  
-  return NextResponse.json({ user })
 }
