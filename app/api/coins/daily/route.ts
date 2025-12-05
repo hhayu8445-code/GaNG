@@ -1,67 +1,61 @@
-import { NextResponse } from "next/server"
-import { getSession } from "@/lib/auth"
-import { prisma } from "@/lib/db"
+import { NextRequest, NextResponse } from 'next/server'
+import { prisma } from '@/lib/db'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 
-export async function POST() {
+export async function POST(request: NextRequest) {
   try {
-    const session = await getSession()
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    const session = await getServerSession(authOptions)
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const user = await prisma.user.findUnique({
-      where: { discordId: session.discordId }
+      where: { discordId: session.user.id }
     })
 
     if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 })
-    }
-
-    if (user.isBanned) {
-      return NextResponse.json({ error: "Account banned" }, { status: 403 })
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
     const now = new Date()
-    const lastClaim = user.lastDailyClaim ? new Date(user.lastDailyClaim) : null
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
     
-    if (lastClaim) {
-      const hoursSinceLastClaim = (now.getTime() - lastClaim.getTime()) / (1000 * 60 * 60)
-      
-      if (hoursSinceLastClaim < 24) {
-        const hoursRemaining = Math.ceil(24 - hoursSinceLastClaim)
-        return NextResponse.json({ 
-          error: "Already claimed today",
-          canClaimIn: `${hoursRemaining} hours`,
-          nextClaimAt: new Date(lastClaim.getTime() + 24 * 60 * 60 * 1000).toISOString()
-        }, { status: 429 })
-      }
+    if (user.lastDailyClaim && user.lastDailyClaim >= today) {
+      return NextResponse.json({ 
+        error: 'Daily coins already claimed today',
+        nextClaim: new Date(today.getTime() + 24 * 60 * 60 * 1000)
+      }, { status: 400 })
     }
 
-    const updatedUser = await prisma.user.update({
-      where: { discordId: session.discordId },
-      data: {
-        coins: { increment: 20 },
-        lastDailyClaim: now
-      }
-    })
+    const dailyAmount = user.membership === 'premium' ? 50 : 25
 
-    await prisma.coinTransaction.create({
-      data: {
-        userId: session.discordId,
-        amount: 20,
-        type: "daily_claim",
-        description: "Daily coin claim"
-      }
-    })
+    const [updatedUser] = await Promise.all([
+      prisma.user.update({
+        where: { discordId: session.user.id },
+        data: {
+          coins: { increment: dailyAmount },
+          lastDailyClaim: now
+        }
+      }),
+      prisma.coinTransaction.create({
+        data: {
+          userId: session.user.id,
+          amount: dailyAmount,
+          type: 'daily_claim',
+          description: 'Daily coin claim'
+        }
+      })
+    ])
 
     return NextResponse.json({
       success: true,
-      coinsAdded: 20,
-      newBalance: updatedUser.coins,
-      nextClaimAt: new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString()
+      coinsEarned: dailyAmount,
+      totalCoins: updatedUser.coins,
+      nextClaim: new Date(today.getTime() + 24 * 60 * 60 * 1000)
     })
   } catch (error) {
-    console.error("Daily claim error:", error)
-    return NextResponse.json({ error: "Failed to claim daily coins" }, { status: 500 })
+    console.error('Daily coins error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

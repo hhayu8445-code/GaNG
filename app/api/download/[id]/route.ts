@@ -1,107 +1,103 @@
-import { NextResponse } from "next/server"
-import { getSession } from "@/lib/auth"
-import { prisma } from "@/lib/db"
+import { NextRequest, NextResponse } from 'next/server'
+import { prisma } from '@/lib/db'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 
-export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params
   try {
-    const session = await getSession()
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    const session = await getServerSession(authOptions)
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { id } = await params
-
-    const [asset, user] = await Promise.all([
-      prisma.asset.findUnique({ where: { id } }),
-      prisma.user.findUnique({ where: { discordId: session.discordId } })
-    ])
+    const asset = await prisma.asset.findUnique({
+      where: { id },
+      include: { author: true }
+    })
 
     if (!asset) {
-      return NextResponse.json({ error: "Asset not found" }, { status: 404 })
+      return NextResponse.json({ error: 'Asset not found' }, { status: 404 })
     }
+
+    const user = await prisma.user.findUnique({
+      where: { discordId: session.user.id }
+    })
 
     if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 })
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    if (user.isBanned) {
-      return NextResponse.json({ error: "Account banned" }, { status: 403 })
+    // Check if user has enough coins
+    if (asset.coinPrice > 0 && user.coins < asset.coinPrice) {
+      return NextResponse.json({ 
+        error: 'Insufficient coins',
+        required: asset.coinPrice,
+        available: user.coins
+      }, { status: 400 })
     }
 
-    const hasDownloaded = await prisma.download.findFirst({
+    // Check if already downloaded
+    const existingDownload = await prisma.download.findFirst({
       where: {
-        userId: session.discordId,
+        userId: session.user.id,
         assetId: id
       }
     })
 
-    if (asset.coinPrice > 0) {
-      if (user.coins < asset.coinPrice && !hasDownloaded) {
-        return NextResponse.json({ 
-          error: "Insufficient coins", 
-          required: asset.coinPrice,
-          current: user.coins 
-        }, { status: 402 })
-      }
-
-      if (!hasDownloaded) {
-        await prisma.$transaction([
-          prisma.user.update({
-            where: { discordId: session.discordId },
-            data: { coins: { decrement: asset.coinPrice } }
-          }),
-          prisma.download.create({
-            data: {
-              userId: session.discordId,
-              assetId: id,
-              coinSpent: asset.coinPrice
-            }
-          }),
-          prisma.coinTransaction.create({
-            data: {
-              userId: session.discordId,
-              amount: -asset.coinPrice,
-              type: "download",
-              description: `Downloaded: ${asset.title}`
-            }
-          }),
-          prisma.asset.update({
-            where: { id },
-            data: { downloads: { increment: 1 } }
-          })
-        ])
-
-        return NextResponse.json({
-          success: true,
-          downloadUrl: asset.downloadLink,
-          coinsDeducted: asset.coinPrice,
-          newBalance: user.coins - asset.coinPrice
-        })
-      }
+    if (existingDownload) {
+      return NextResponse.json({
+        success: true,
+        downloadUrl: asset.downloadLink,
+        message: 'Already purchased'
+      })
     }
 
-    if (!hasDownloaded) {
-      await prisma.$transaction([
-        prisma.download.create({
+    // Process download transaction
+    await prisma.$transaction(async (tx) => {
+      // Deduct coins if required
+      if (asset.coinPrice > 0) {
+        await tx.user.update({
+          where: { discordId: session.user.id },
+          data: { coins: { decrement: asset.coinPrice } }
+        })
+
+        await tx.coinTransaction.create({
           data: {
-            userId: session.discordId,
-            assetId: id,
-            coinSpent: 0
+            userId: session.user.id,
+            amount: -asset.coinPrice,
+            type: 'asset_purchase',
+            description: `Purchased: ${asset.title}`
           }
-        }),
-        prisma.asset.update({
-          where: { id },
-          data: { downloads: { increment: 1 } }
         })
-      ])
-    }
+      }
+
+      // Record download
+      await tx.download.create({
+        data: {
+          userId: session.user.id,
+          assetId: id,
+          coinSpent: asset.coinPrice
+        }
+      })
+
+      // Increment download count
+      await tx.asset.update({
+        where: { id },
+        data: { downloads: { increment: 1 } }
+      })
+    })
 
     return NextResponse.json({
       success: true,
-      downloadUrl: asset.downloadLink
+      downloadUrl: asset.downloadLink,
+      coinsSpent: asset.coinPrice
     })
   } catch (error) {
-    console.error("Download error:", error)
-    return NextResponse.json({ error: "Download failed" }, { status: 500 })
+    console.error('Download error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
